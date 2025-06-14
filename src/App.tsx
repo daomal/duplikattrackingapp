@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { Toaster } from "sonner";
@@ -12,6 +11,7 @@ import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicData from "@/pages/PublicData";
+import TrackingMap from "@/pages/TrackingMap";
 import InstallApp from "@/components/InstallApp";
 import SplashScreen from "@/components/SplashScreen";
 
@@ -61,6 +61,14 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="admin">
                       <Admin />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/tracking-map"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <TrackingMap />
                     </ProtectedRoute>
                   }
                 />

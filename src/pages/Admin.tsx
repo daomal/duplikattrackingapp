@@ -9,9 +9,10 @@ import {
   CardDescription
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import ShipmentTable from "@/components/ShipmentTable";
 import DataFilters from "@/components/DataFilters";
 import FileUploader from "@/components/FileUploader";
@@ -20,7 +21,6 @@ import ShipmentForm from "@/components/ShipmentForm";
 import { getShipments, subscribeToShipments } from "@/lib/shipmentService";
 import { Shipment, FilterOptions, ShipmentStatus } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useNavigate } from "react-router-dom";
 import CompanyAnalytics from "@/components/CompanyAnalytics";
 import AppDownloadInfo from "@/components/AppDownloadInfo";
 
@@ -179,7 +179,17 @@ const Admin = () => {
                   Kelola dan pantau data pengiriman
                 </p>
               </div>
-              <Button variant="outline" onClick={() => signOut()}>Logout</Button>
+              <div className="flex gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/tracking-map')}
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Peta Pelacakan
+                </Button>
+                <Button variant="outline" onClick={() => signOut()}>Logout</Button>
+              </div>
             </div>
             
             {/* App Download Info */}
