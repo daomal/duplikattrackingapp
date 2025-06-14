@@ -29,18 +29,12 @@ const Auth = () => {
   const [showAdminCreation, setShowAdminCreation] = useState(false);
 
   useEffect(() => {
-    // Only redirect if we have both user and profile
+    // Only redirect if we have both user and profile and not loading
     if (user && profile && !authLoading) {
       console.log("User already logged in, redirecting based on role:", profile.role);
       
-      // Small delay to ensure state is stable
-      setTimeout(() => {
-        if (profile.role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/dashboard-supir', { replace: true });
-        }
-      }, 100);
+      // Don't redirect immediately, let the AuthContext handle it
+      // This prevents conflicts with the auth state change handler
     }
   }, [user, profile, authLoading, navigate]);
 
@@ -63,7 +57,7 @@ const Auth = () => {
         toast.error(result.message || 'Gagal login. Pastikan email dan password benar.');
       } else {
         toast.success('Login berhasil!');
-        // Navigation will be handled by the useEffect when profile is loaded
+        // Navigation will be handled by AuthContext
       }
     } catch (error: any) {
       console.error('Login exception:', error);
@@ -203,6 +197,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -214,6 +209,7 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <Button 
@@ -237,6 +233,7 @@ const Auth = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -248,6 +245,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -260,6 +258,7 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
+                      disabled={isLoading}
                     />
                   </div>
                   <Button 
@@ -284,6 +283,7 @@ const Auth = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                   <Input
                     type="email"
@@ -291,6 +291,7 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                   <Input
                     type="password"
@@ -299,6 +300,7 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
+                    disabled={isLoading}
                   />
                   <Button 
                     type="submit" 
