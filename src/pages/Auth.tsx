@@ -13,25 +13,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { registerUser, loginUser } from '@/utils/supabaseUtils';
+import { registerUser, loginUser, createAdminUser } from '@/utils/supabaseUtils';
+import { AlertCircle, Info } from 'lucide-react';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('login');
+  const [showAdminCreation, setShowAdminCreation] = useState(false);
 
   useEffect(() => {
     // Redirect if user is already logged in
-    if (user) {
-      console.log("User already logged in, redirecting to home");
-      navigate('/');
+    if (user && profile) {
+      console.log("User already logged in, redirecting based on role");
+      if (profile.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard-supir');
+      }
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,14 +57,9 @@ const Auth = () => {
       if (!result.success) {
         console.error('Login failed:', result.message);
         toast.error(result.message || 'Gagal login. Pastikan email dan password benar.');
-        
-        // If login fails due to invalid credentials, suggest registration
-        if (result.message.includes('tidak valid')) {
-          toast.info('Belum punya akun? Silakan daftar terlebih dahulu.');
-        }
       } else {
-        toast.success(result.message);
-        navigate('/');
+        toast.success('Login berhasil!');
+        // Navigation will be handled by the useEffect when profile is loaded
       }
     } catch (error: any) {
       console.error('Login exception:', error);
@@ -92,7 +94,6 @@ const Auth = () => {
       } else {
         toast.success(result.message);
         setActiveTab('login');
-        toast.info('Silakan login dengan akun baru Anda');
         // Clear form
         setEmail('');
         setPassword('');
@@ -105,6 +106,48 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password || !name) {
+      toast.error('Harap isi semua field untuk membuat admin');
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await createAdminUser(email, password, name);
+      
+      if (!result.success) {
+        toast.error(result.message);
+      } else {
+        toast.success('Admin berhasil dibuat! Silakan login.');
+        setShowAdminCreation(false);
+        setActiveTab('login');
+        // Clear form
+        setEmail('');
+        setPassword('');
+        setName('');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Gagal membuat admin');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-blue-500 rounded-full border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-gray-50">
@@ -119,6 +162,26 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Development helper */}
+            {process.env.NODE_ENV === 'development' && (
+              <Alert className="mb-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p>Mode Development:</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowAdminCreation(!showAdminCreation)}
+                      className="w-full"
+                    >
+                      {showAdminCreation ? 'Sembunyikan' : 'Tampilkan'} Pembuatan Admin
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -205,6 +268,44 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+
+            {/* Admin creation form (development only) */}
+            {showAdminCreation && process.env.NODE_ENV === 'development' && (
+              <div className="mt-6 p-4 border rounded-lg bg-yellow-50">
+                <h3 className="font-semibold mb-3 text-yellow-800">Buat Admin (Development)</h3>
+                <form onSubmit={handleCreateAdmin} className="space-y-3">
+                  <Input
+                    type="text"
+                    placeholder="Nama Admin"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                  <Input
+                    type="email"
+                    placeholder="Email Admin"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Password Admin"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-yellow-600 hover:bg-yellow-700"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Membuat Admin...' : 'Buat Admin'}
+                  </Button>
+                </form>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="text-center text-sm text-gray-500">
             <p className="w-full">

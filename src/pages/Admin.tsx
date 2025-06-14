@@ -9,7 +9,7 @@ import {
   CardDescription
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw, MapPin } from "lucide-react";
+import { Plus, RefreshCw, MapPin, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -23,15 +23,17 @@ import { Shipment, FilterOptions, ShipmentStatus } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import CompanyAnalytics from "@/components/CompanyAnalytics";
 import AppDownloadInfo from "@/components/AppDownloadInfo";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Admin = () => {
-  const { isAdmin, user, signOut } = useAuth();
+  const { isAdmin, user, profile, signOut, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [filteredShipments, setFilteredShipments] = useState<Shipment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     dateRange: [null, null],
     status: "all",
@@ -40,10 +42,25 @@ const Admin = () => {
     searchQuery: ""
   });
 
-  // Improved effect to check admin access
+  // Debug information
   useEffect(() => {
+    console.log('Admin page - Auth state:', {
+      user: user?.email,
+      profile: profile,
+      isAdmin,
+      authLoading
+    });
+  }, [user, profile, isAdmin, authLoading]);
+
+  // Check admin access
+  useEffect(() => {
+    if (authLoading) {
+      console.log('Auth still loading...');
+      return;
+    }
+
     if (!user) {
-      // If not logged in at all, redirect to auth page
+      console.log('No user found, redirecting to auth');
       toast({
         title: "Akses ditolak",
         description: "Silakan login terlebih dahulu",
@@ -53,44 +70,53 @@ const Admin = () => {
       return;
     }
     
+    if (!profile) {
+      console.log('User found but no profile, waiting...');
+      setError('Memuat profil pengguna...');
+      return;
+    }
+
     if (!isAdmin) {
-      // If logged in but not admin, redirect to home
+      console.log('User is not admin, redirecting to home');
       toast({
         title: "Akses ditolak",
         description: "Anda tidak memiliki akses admin",
         variant: "destructive",
       });
       navigate('/');
-    } else {
-      // Admin is logged in, fetch shipments
-      fetchShipments();
+      return;
     }
-  }, [isAdmin, user, navigate, toast]);
+
+    // User is admin, clear any errors and fetch data
+    setError(null);
+    fetchShipments();
+  }, [user, profile, isAdmin, authLoading, navigate, toast]);
 
   // Subscribe to real-time shipment updates
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin || authLoading) return;
 
     const unsubscribe = subscribeToShipments((updatedShipments) => {
       setShipments(updatedShipments);
-      // Re-apply any active filters
       applyFilters(updatedShipments, filterOptions);
     });
 
-    // Cleanup function
     return () => unsubscribe();
-  }, [isAdmin, filterOptions]);
+  }, [isAdmin, authLoading, filterOptions]);
 
   const fetchShipments = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
+      console.log('Fetching shipments...');
       const data = await getShipments();
+      console.log('Shipments fetched:', data.length);
       setShipments(data);
-      
-      // Apply any existing filters
       applyFilters(data, filterOptions);
     } catch (error) {
       console.error("Error fetching shipments:", error);
+      setError('Gagal memuat data pengiriman');
       toast({
         title: "Error",
         description: "Gagal memuat data pengiriman",
@@ -165,8 +191,51 @@ const Admin = () => {
     pending: filteredShipments.filter(s => s.status === "tertunda").length,
     failed: filteredShipments.filter(s => s.status === "gagal").length
   };
-  
-  // If not admin or not logged in, this will return early due to the useEffect redirect
+
+  // Show loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-blue-500 rounded-full border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-600">
+              <AlertCircle className="h-5 w-5" />
+              {error}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                {!profile ? 'Sedang memuat profil pengguna...' : 'Terjadi kesalahan saat memuat halaman admin.'}
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => window.location.reload()} className="flex-1">
+                  Muat Ulang
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/')} className="flex-1">
+                  Kembali
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Main admin interface
   return (
     <SidebarProvider>
       <div className="min-h-screen bg-background">
@@ -178,6 +247,11 @@ const Admin = () => {
                 <p className="text-muted-foreground">
                   Kelola dan pantau data pengiriman
                 </p>
+                {profile && (
+                  <p className="text-sm text-gray-500">
+                    Selamat datang, {profile.name} ({profile.role})
+                  </p>
+                )}
               </div>
               <div className="flex gap-4">
                 <Button 
@@ -194,6 +268,16 @@ const Admin = () => {
             
             {/* App Download Info */}
             <AppDownloadInfo />
+            
+            {/* Debug info for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Debug: User ID: {user?.id}, Role: {profile?.role}, Is Admin: {isAdmin ? 'Yes' : 'No'}
+                </AlertDescription>
+              </Alert>
+            )}
             
             <Tabs defaultValue="manage">
               <TabsList className="mb-4">
@@ -241,10 +325,21 @@ const Admin = () => {
                     </CardContent>
                   </Card>
                   
-                  <ShipmentTable 
-                    shipments={filteredShipments} 
-                    onShipmentUpdated={fetchShipments}
-                  />
+                  {isLoading ? (
+                    <Card>
+                      <CardContent className="py-12">
+                        <div className="text-center">
+                          <div className="animate-spin h-12 w-12 border-4 border-blue-500 rounded-full border-t-transparent mx-auto mb-4"></div>
+                          <p className="text-gray-600">Memuat data pengiriman...</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <ShipmentTable 
+                      shipments={filteredShipments} 
+                      onShipmentUpdated={fetchShipments}
+                    />
+                  )}
                 </div>
               </TabsContent>
               

@@ -20,6 +20,7 @@ interface AuthContextProps {
     data: any | null;
   }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -31,71 +32,118 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchUserProfile = async (userId: string, retryCount = 0): Promise<UserProfile | null> => {
+    try {
+      console.log(`Fetching profile for user: ${userId} (attempt ${retryCount + 1})`);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, role, created_at')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+
+      if (!data) {
+        console.log('No profile found, ensuring user exists in profiles...');
+        
+        // Try to create the profile
+        const created = await ensureUserInProfiles();
+        
+        if (created && retryCount < 2) {
+          // Retry fetching after creation
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return fetchUserProfile(userId, retryCount + 1);
+        }
+        
+        console.log('Profile still not found after creation attempt');
+        return null;
+      }
+
+      console.log('User profile fetched successfully:', data);
+      return data as UserProfile;
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+      return null;
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      const profileData = await fetchUserProfile(user.id);
+      setProfile(profileData);
+    }
+  };
+
   useEffect(() => {
+    let mounted = true;
+
     // Listen for authentication state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("Auth state changed:", event, session);
+      async (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
+        
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Schedule the profile fetch and ensure user exists in profiles
-          setTimeout(async () => {
+          // Ensure profile exists and fetch it
+          try {
             await ensureUserInProfiles();
-            await fetchUserProfile(session.user.id);
-          }, 100);
+            const profileData = await fetchUserProfile(session.user.id);
+            if (mounted) {
+              setProfile(profileData);
+            }
+          } catch (error) {
+            console.error('Error handling auth state change:', error);
+          }
         } else {
-          setProfile(null);
+          if (mounted) {
+            setProfile(null);
+          }
+        }
+        
+        if (mounted) {
+          setIsLoading(false);
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+
+      console.log("Initial session check:", session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Ensure user exists in profiles and fetch profile
-        ensureUserInProfiles().then(() => {
-          fetchUserProfile(session.user.id);
-        });
+        try {
+          await ensureUserInProfiles();
+          const profileData = await fetchUserProfile(session.user.id);
+          if (mounted) {
+            setProfile(profileData);
+          }
+        } catch (error) {
+          console.error('Error in initial session check:', error);
+        }
       }
       
-      setIsLoading(false);
+      if (mounted) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, role, created_at')
-        .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to handle no results gracefully
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return;
-      }
-
-      if (!data) {
-        console.log('No profile found, will be created by ensureUserInProfiles');
-        return;
-      }
-
-      console.log('User profile fetched:', data);
-      setProfile(data as UserProfile);
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-    }
-  };
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -105,16 +153,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
       });
 
-      console.log("Sign in response:", data, error);
+      console.log("Sign in response:", data?.user?.email, error?.message);
       
       if (!error && data?.user) {
-        // Ensure user exists in profiles and fetch profile
-        setTimeout(async () => {
-          if (data.user) {
-            await ensureUserInProfiles();
-            await fetchUserProfile(data.user.id);
-          }
-        }, 100);
+        // Profile will be handled by the auth state change listener
+        console.log("Sign in successful, waiting for profile...");
       }
 
       return { data, error };
@@ -133,11 +176,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name: name,
+            full_name: name
           },
         },
       });
 
-      console.log("Sign up response:", data, error);
+      console.log("Sign up response:", data?.user?.email, error?.message);
       
       return { data, error };
     } catch (error) {
@@ -158,7 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Always check if the profile has admin role
+  // Check if the profile has admin role
   const isAdmin = profile?.role === 'admin';
 
   return (
@@ -172,6 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signUp,
         signOut,
+        refreshProfile,
       }}
     >
       {children}

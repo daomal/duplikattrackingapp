@@ -39,39 +39,49 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
       return false;
     }
 
+    console.log('Checking if user exists in profiles:', user.id);
+
     // Check if the user exists in the profiles table
-    const { data, error } = await supabase
+    const { data: existingProfile, error: selectError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
+      .maybeSingle();
 
-    if (error) {
-      console.error('Error checking user profile:', error);
+    if (selectError) {
+      console.error('Error checking user profile:', selectError);
       return false;
     }
 
     // If the user doesn't exist, create them
-    if (!data) {
-      console.log('Creating new user profile');
-      const { error: insertError } = await supabase
+    if (!existingProfile) {
+      console.log('Creating new user profile for:', user.email);
+      
+      const userName = user.user_metadata?.name || 
+                      user.user_metadata?.full_name || 
+                      user.email?.split('@')[0] || 
+                      'User';
+
+      const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert({
           id: user.id,
-          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          name: userName,
           role: 'user'
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) {
         console.error('Error creating user profile:', insertError);
         return false;
       }
       
-      console.log('User profile created successfully');
+      console.log('User profile created successfully:', newProfile);
       return true;
     }
 
-    console.log('User profile already exists');
+    console.log('User profile already exists:', existingProfile);
     return true;
   } catch (error) {
     console.error('Error ensuring user in profiles:', error);
@@ -88,12 +98,16 @@ export const registerUser = async (email: string, password: string, name: string
   data?: any;
 }> => {
   try {
-    console.log(`Registering user: ${email}`);
+    console.log(`Registering user: ${email} with name: ${name}`);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name }
+        data: {
+          name: name,
+          full_name: name
+        }
       }
     });
     
@@ -105,13 +119,18 @@ export const registerUser = async (email: string, password: string, name: string
       };
     }
 
-    // The profile will be created automatically by the trigger or by ensureUserInProfiles
-    // Don't create it here to avoid conflicts
-    console.log('Registration successful:', data);
+    if (data.user) {
+      console.log('User registered successfully:', data.user.email);
+      
+      // Wait a bit for the trigger to work, then ensure profile exists
+      setTimeout(async () => {
+        await ensureUserInProfiles();
+      }, 1000);
+    }
     
     return {
       success: true,
-      message: 'Pendaftaran berhasil',
+      message: 'Pendaftaran berhasil! Silakan login dengan akun baru Anda.',
       data
     };
   } catch (error: any) {
@@ -142,12 +161,13 @@ export const loginUser = async (email: string, password: string): Promise<{
     if (error) {
       console.error('Login error:', error);
       
-      // Memberikan pesan yang lebih spesifik
       let errorMessage = 'Gagal login';
       if (error.message.includes('Invalid login credentials')) {
-        errorMessage = 'Email atau password tidak valid. Pastikan Anda sudah mendaftar terlebih dahulu.';
+        errorMessage = 'Email atau password tidak valid. Pastikan Anda sudah mendaftar dan menggunakan kredensial yang benar.';
       } else if (error.message.includes('Email not confirmed')) {
         errorMessage = 'Email belum dikonfirmasi. Silakan periksa email Anda.';
+      } else if (error.message.includes('Too many requests')) {
+        errorMessage = 'Terlalu banyak percobaan login. Silakan tunggu beberapa menit.';
       }
       
       return {
@@ -156,7 +176,12 @@ export const loginUser = async (email: string, password: string): Promise<{
       };
     }
     
-    console.log('Login successful:', data.user?.email);
+    if (data.user) {
+      console.log('Login successful for:', data.user.email);
+      
+      // Ensure user profile exists after login
+      await ensureUserInProfiles();
+    }
     
     return {
       success: true,
@@ -214,9 +239,12 @@ export const isUserAdmin = async (): Promise<boolean> => {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .maybeSingle(); // Use maybeSingle to handle no results gracefully
+      .maybeSingle();
     
-    if (error || !data) return false;
+    if (error || !data) {
+      console.log('No profile found or error:', error);
+      return false;
+    }
     
     return data.role === 'admin';
   } catch (error) {
@@ -250,6 +278,54 @@ export const resetPassword = async (email: string): Promise<{
     return {
       success: false,
       message: error.message || 'Gagal mengirim email reset password'
+    };
+  }
+};
+
+/**
+ * Manually create admin user (for development/testing)
+ */
+export const createAdminUser = async (email: string, password: string, name: string): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  try {
+    // First register the user
+    const registerResult = await registerUser(email, password, name);
+    
+    if (!registerResult.success) {
+      return registerResult;
+    }
+    
+    // Wait for profile creation
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Update the user's role to admin
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('id', user.id);
+        
+      if (error) {
+        console.error('Error updating user role to admin:', error);
+        return {
+          success: false,
+          message: 'User created but failed to set admin role'
+        };
+      }
+    }
+    
+    return {
+      success: true,
+      message: 'Admin user created successfully'
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Failed to create admin user'
     };
   }
 };
