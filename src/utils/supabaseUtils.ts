@@ -41,7 +41,7 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
 
     console.log('Ensuring user exists in profiles:', user.id, user.email);
 
-    // Check if the user exists in the profiles table
+    // First check if profile already exists
     const { data: existingProfile, error: selectError } = await supabase
       .from('profiles')
       .select('*')
@@ -50,73 +50,60 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
 
     if (selectError && selectError.code !== 'PGRST116') {
       console.error('Error checking user profile:', selectError);
-      // Continue to try creating the profile
     }
 
-    // If the user doesn't exist, create them
-    if (!existingProfile) {
-      console.log('Creating new user profile for:', user.email);
+    if (existingProfile) {
+      console.log('User profile already exists:', existingProfile);
+      return true;
+    }
+
+    console.log('Creating new user profile for:', user.email);
+    
+    const userName = user.user_metadata?.name || 
+                    user.user_metadata?.full_name || 
+                    user.email?.split('@')[0] || 
+                    'User';
+
+    // Use the RPC function to create profile
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('create_user_profile', {
+      user_id: user.id,
+      user_name: userName,
+      user_role: 'user'
+    });
+    
+    if (rpcError) {
+      console.error('RPC error creating profile:', rpcError);
       
-      const userName = user.user_metadata?.name || 
-                      user.user_metadata?.full_name || 
-                      user.email?.split('@')[0] || 
-                      'User';
-
-      // Try using the RPC function first
-      try {
-        const { error: rpcError } = await supabase.rpc('create_user_profile', {
-          user_id: user.id,
-          user_name: userName,
-          user_role: 'user'
-        });
-        
-        if (!rpcError) {
-          console.log('Profile created via RPC function');
-          return true;
-        }
-        
-        console.log('RPC failed, trying direct insert:', rpcError);
-      } catch (rpcError) {
-        console.log('RPC function not available, trying direct insert');
-      }
-
-      // Fallback to direct insert
-      const { data: newProfile, error: insertError } = await supabase
+      // Fallback to direct insert if RPC fails
+      console.log('Trying direct insert as fallback...');
+      const { error: insertError } = await supabase
         .from('profiles')
         .insert({
           id: user.id,
           name: userName,
           role: 'user'
-        })
-        .select()
-        .single();
+        });
 
       if (insertError) {
-        console.error('Error creating user profile:', insertError);
+        console.error('Direct insert also failed:', insertError);
         
-        // If it's a permission error, the user might already exist
-        if (insertError.code === '42501') {
-          // Check again if profile was created by trigger
-          const { data: checkProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
-            
-          if (checkProfile) {
-            console.log('Profile found after permission error - created by trigger');
-            return true;
-          }
+        // Check one more time if profile was created by trigger
+        const { data: finalCheck } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (finalCheck) {
+          console.log('Profile found after errors - created by trigger');
+          return true;
         }
         
         return false;
       }
-      
-      console.log('User profile created successfully:', newProfile);
-      return true;
     }
-
-    console.log('User profile already exists:', existingProfile);
+    
+    console.log('User profile created successfully via RPC:', rpcResult);
     return true;
   } catch (error) {
     console.error('Error ensuring user in profiles:', error);
@@ -157,10 +144,9 @@ export const registerUser = async (email: string, password: string, name: string
     if (data.user) {
       console.log('User registered successfully:', data.user.email);
       
-      // Wait a moment for the trigger to work
+      // Wait for trigger to work, then ensure profile exists
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Ensure profile exists
       const profileCreated = await ensureUserInProfiles();
       
       if (!profileCreated) {
@@ -365,23 +351,16 @@ export const createAdminUser = async (email: string, password: string, name: str
     await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Create or update profile with admin role using RPC
-    try {
-      const { error: rpcError } = await supabase.rpc('create_user_profile', {
-        user_id: data.user.id,
-        user_name: name,
-        user_role: 'admin'
-      });
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('create_user_profile', {
+      user_id: data.user.id,
+      user_name: name,
+      user_role: 'admin'
+    });
+    
+    if (rpcError) {
+      console.error('RPC error creating admin profile:', rpcError);
       
-      if (rpcError) {
-        console.error('RPC error creating admin profile:', rpcError);
-        throw rpcError;
-      }
-      
-      console.log('Admin profile created via RPC');
-    } catch (rpcError) {
       // Fallback to direct update
-      console.log('RPC failed, trying direct update');
-      
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ role: 'admin' })
@@ -396,7 +375,7 @@ export const createAdminUser = async (email: string, password: string, name: str
       }
     }
     
-    console.log('Admin user created successfully');
+    console.log('Admin user created successfully:', rpcResult);
     
     return {
       success: true,
@@ -434,5 +413,28 @@ export const createUserProfile = async (userId: string, name: string, role: 'use
   } catch (error) {
     console.error('Exception creating user profile:', error);
     return false;
+  }
+};
+
+/**
+ * Get user profile by ID
+ */
+export const getUserProfile = async (userId: string): Promise<any> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Exception fetching user profile:', error);
+    return null;
   }
 };

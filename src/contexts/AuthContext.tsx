@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/lib/types';
-import { ensureUserInProfiles } from '@/utils/supabaseUtils';
+import { ensureUserInProfiles, getUserProfile } from '@/utils/supabaseUtils';
 
 interface AuthContextProps {
   user: User | null;
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Wait a bit before fetching to allow for profile creation
       if (retryCount === 0) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
       const { data, error } = await supabase
@@ -50,11 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Error fetching user profile:', error);
         
-        // If it's a permission error, try to create the profile
-        if (error.code === '42501' && retryCount < 2) {
-          console.log('Permission error, trying to ensure profile exists...');
+        // If profile doesn't exist, try to create it
+        if (error.code === 'PGRST116' && retryCount < 3) {
+          console.log('Profile not found, trying to create...');
           await ensureUserInProfiles();
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
           return fetchUserProfile(userId, retryCount + 1);
         }
         
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (created) {
             // Wait and retry
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 2000));
             return fetchUserProfile(userId, retryCount + 1);
           }
         }
