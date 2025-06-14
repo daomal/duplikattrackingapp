@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +50,11 @@ const Auth = () => {
       if (!result.success) {
         console.error('Login failed:', result.message);
         toast.error(result.message || 'Gagal login. Pastikan email dan password benar.');
+        
+        // If login fails due to invalid credentials, suggest registration
+        if (result.message.includes('tidak valid')) {
+          toast.info('Belum punya akun? Silakan daftar terlebih dahulu.');
+        }
       } else {
         toast.success(result.message);
         navigate('/');
@@ -71,6 +75,11 @@ const Auth = () => {
       return;
     }
     
+    if (password.length < 6) {
+      toast.error('Password minimal 6 karakter');
+      return;
+    }
+    
     setIsLoading(true);
     console.log(`Attempting to register with email: ${email}`);
     
@@ -84,6 +93,10 @@ const Auth = () => {
         toast.success(result.message);
         setActiveTab('login');
         toast.info('Silakan login dengan akun baru Anda');
+        // Clear form
+        setEmail('');
+        setPassword('');
+        setName('');
       }
     } catch (error: any) {
       console.error('Signup exception:', error);

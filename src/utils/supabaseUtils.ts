@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -45,9 +44,9 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error checking user profile:', error);
       return false;
     }
@@ -59,7 +58,7 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
         .from('profiles')
         .insert({
           id: user.id,
-          name: user.email?.split('@')[0] || 'User',
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
           role: 'user'
         });
 
@@ -68,6 +67,7 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
         return false;
       }
       
+      console.log('User profile created successfully');
       return true;
     }
 
@@ -105,19 +105,8 @@ export const registerUser = async (email: string, password: string, name: string
       };
     }
 
-    // Auto-create the profile
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        name: name,
-        role: 'user'
-      });
-      
-      if (profileError) {
-        console.error('Error creating user profile:', profileError);
-      }
-    }
-
+    // The profile will be created automatically by the trigger or by ensureUserInProfiles
+    // Don't create it here to avoid conflicts
     console.log('Registration successful:', data);
     
     return {
@@ -156,7 +145,9 @@ export const loginUser = async (email: string, password: string): Promise<{
       // Memberikan pesan yang lebih spesifik
       let errorMessage = 'Gagal login';
       if (error.message.includes('Invalid login credentials')) {
-        errorMessage = 'Email atau password tidak valid. Silakan periksa kembali.';
+        errorMessage = 'Email atau password tidak valid. Pastikan Anda sudah mendaftar terlebih dahulu.';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Email belum dikonfirmasi. Silakan periksa email Anda.';
       }
       
       return {
@@ -223,7 +214,7 @@ export const isUserAdmin = async (): Promise<boolean> => {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle to handle no results gracefully
     
     if (error || !data) return false;
     

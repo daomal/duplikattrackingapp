@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
@@ -41,12 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Schedule the profile fetch to avoid recursive policy issues
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-            // Ensure the user exists in the profiles table
-            ensureUserInProfiles();
-          }, 0);
+          // Schedule the profile fetch and ensure user exists in profiles
+          setTimeout(async () => {
+            await ensureUserInProfiles();
+            await fetchUserProfile(session.user.id);
+          }, 100);
         } else {
           setProfile(null);
         }
@@ -60,7 +58,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        // Ensure user exists in profiles and fetch profile
+        ensureUserInProfiles().then(() => {
+          fetchUserProfile(session.user.id);
+        });
       }
       
       setIsLoading(false);
@@ -77,10 +78,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('id, name, role, created_at')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to handle no results gracefully
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      if (!data) {
+        console.log('No profile found, will be created by ensureUserInProfiles');
         return;
       }
 
@@ -102,15 +108,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("Sign in response:", data, error);
       
       if (!error && data?.user) {
-        // Don't navigate here as it can cause issues with state updates
-        // Navigation will happen in the Auth component
-        
-        // Fetch profile immediately after successful login
-        setTimeout(() => {
+        // Ensure user exists in profiles and fetch profile
+        setTimeout(async () => {
           if (data.user) {
-            fetchUserProfile(data.user.id);
+            await ensureUserInProfiles();
+            await fetchUserProfile(data.user.id);
           }
-        }, 0);
+        }, 100);
       }
 
       return { data, error };
