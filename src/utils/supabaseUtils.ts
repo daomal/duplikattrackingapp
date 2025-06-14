@@ -48,9 +48,9 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (selectError) {
+    if (selectError && selectError.code !== 'PGRST116') {
       console.error('Error checking user profile:', selectError);
-      // Don't return false here, try to create the profile anyway
+      // Continue to try creating the profile
     }
 
     // If the user doesn't exist, create them
@@ -62,6 +62,25 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
                       user.email?.split('@')[0] || 
                       'User';
 
+      // Try using the RPC function first
+      try {
+        const { error: rpcError } = await supabase.rpc('create_user_profile', {
+          user_id: user.id,
+          user_name: userName,
+          user_role: 'user'
+        });
+        
+        if (!rpcError) {
+          console.log('Profile created via RPC function');
+          return true;
+        }
+        
+        console.log('RPC failed, trying direct insert:', rpcError);
+      } catch (rpcError) {
+        console.log('RPC function not available, trying direct insert');
+      }
+
+      // Fallback to direct insert
       const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -75,25 +94,22 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
       if (insertError) {
         console.error('Error creating user profile:', insertError);
         
-        // Try alternative approach - direct insert without RLS
-        try {
-          const { error: directInsertError } = await supabase.rpc('create_user_profile', {
-            user_id: user.id,
-            user_name: userName,
-            user_role: 'user'
-          });
-          
-          if (directInsertError) {
-            console.error('Direct insert also failed:', directInsertError);
-            return false;
+        // If it's a permission error, the user might already exist
+        if (insertError.code === '42501') {
+          // Check again if profile was created by trigger
+          const { data: checkProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+            
+          if (checkProfile) {
+            console.log('Profile found after permission error - created by trigger');
+            return true;
           }
-          
-          console.log('Profile created via RPC function');
-          return true;
-        } catch (rpcError) {
-          console.error('RPC function failed:', rpcError);
-          return false;
         }
+        
+        return false;
       }
       
       console.log('User profile created successfully:', newProfile);
@@ -141,41 +157,14 @@ export const registerUser = async (email: string, password: string, name: string
     if (data.user) {
       console.log('User registered successfully:', data.user.email);
       
-      // Try to ensure profile exists immediately
-      try {
-        // Wait a moment for the trigger to work
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Check if profile was created by trigger
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .maybeSingle();
-          
-        if (!profile) {
-          console.log('Profile not created by trigger, creating manually...');
-          
-          // Create profile manually
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              name: name,
-              role: 'user'
-            });
-            
-          if (profileError) {
-            console.error('Manual profile creation failed:', profileError);
-          } else {
-            console.log('Profile created manually');
-          }
-        } else {
-          console.log('Profile created by trigger:', profile);
-        }
-      } catch (profileError) {
-        console.error('Error handling profile creation:', profileError);
-        // Don't fail registration if profile creation fails
+      // Wait a moment for the trigger to work
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Ensure profile exists
+      const profileCreated = await ensureUserInProfiles();
+      
+      if (!profileCreated) {
+        console.warn('Profile creation failed, but user was registered');
       }
     }
     
@@ -373,23 +362,38 @@ export const createAdminUser = async (email: string, password: string, name: str
     console.log('Admin user registered, creating profile...');
     
     // Wait for trigger to work
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Create or update profile with admin role
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: data.user.id,
-        name: name,
-        role: 'admin'
+    // Create or update profile with admin role using RPC
+    try {
+      const { error: rpcError } = await supabase.rpc('create_user_profile', {
+        user_id: data.user.id,
+        user_name: name,
+        user_role: 'admin'
       });
       
-    if (profileError) {
-      console.error('Error creating admin profile:', profileError);
-      return {
-        success: false,
-        message: 'User dibuat tapi gagal set role admin'
-      };
+      if (rpcError) {
+        console.error('RPC error creating admin profile:', rpcError);
+        throw rpcError;
+      }
+      
+      console.log('Admin profile created via RPC');
+    } catch (rpcError) {
+      // Fallback to direct update
+      console.log('RPC failed, trying direct update');
+      
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('id', data.user.id);
+        
+      if (updateError) {
+        console.error('Error updating profile to admin:', updateError);
+        return {
+          success: false,
+          message: 'User dibuat tapi gagal set role admin'
+        };
+      }
     }
     
     console.log('Admin user created successfully');
