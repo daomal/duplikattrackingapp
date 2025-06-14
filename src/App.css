@@ -1,0 +1,293 @@
+
+#root {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  text-align: left;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em rgba(26, 74, 155, 0.6));
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em rgba(26, 74, 155, 0.6));
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* Improved gradient backgrounds */
+.bg-gradient-soft {
+  background: linear-gradient(135deg, #ffffff 0%, #f5efe6 100%);
+}
+
+.bg-gradient-blue {
+  background: linear-gradient(90deg, #e6f7fd 0%, #ffffff 100%);
+}
+
+.bg-gradient-purple {
+  background: linear-gradient(135deg, #ffffff 0%, #e8dbf9 100%);
+}
+
+.bg-gradient-data {
+  background: linear-gradient(to top, #f5efe6 0%, #ffffff 100%);
+}
+
+.gradient-card {
+  background: linear-gradient(90deg, #f5efe6 0%, #ffffff 100%);
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 1px solid #e6d9c7;
+  position: relative;
+  overflow: hidden;
+}
+
+.gradient-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(to bottom, #9b87f5, #6E59A5);
+}
+
+.gradient-card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Book-style card gradients */
+.bg-gradient-teal {
+  background: linear-gradient(135deg, #f5efe6 0%, #ffffff 100%);
+}
+
+.bg-gradient-sunset {
+  background: linear-gradient(135deg, #ffffff 0%, #f5efe6 100%);
+}
+
+.bg-gradient-ocean {
+  background: linear-gradient(to right, #1EAEDB, #0FA0CE);
+}
+
+.bg-gradient-mint {
+  background: linear-gradient(to right, #f5efe6, #ffffff);
+}
+
+.bg-gradient-twilight {
+  background: linear-gradient(135deg, #ffffff 0%, #f5efe6 100%);
+}
+
+.main-background {
+  background: linear-gradient(135deg, #ffffff 0%, #f5efe6 100%);
+  min-height: 100vh;
+}
+
+.data-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.data-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(to bottom, #9b87f5, #6E59A5);
+}
+
+.data-card:hover {
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+.dashboard-page {
+  background: #f5efe6;
+}
+
+.table-container {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  border: 1px solid #e6d9c7;
+}
+
+.table-header {
+  background: linear-gradient(to right, #1EAEDB, #0FA0CE);
+}
+
+/* 3D chart bars */
+.recharts-bar-rectangle {
+  filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.2));
+  transition: filter 0.3s ease;
+}
+
+.recharts-bar-rectangle:hover {
+  filter: drop-shadow(3px 6px 8px rgba(0, 0, 0, 0.3));
+}
+
+.recharts-pie {
+  filter: drop-shadow(4px 8px 12px rgba(0, 0, 0, 0.25));
+}
+
+.recharts-area {
+  filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+/* Book-themed cards */
+.book-style-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15), 
+              0 6px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+  transform: perspective(1000px);
+}
+
+.book-style-card:hover {
+  transform: perspective(1000px) rotateX(5deg);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.2), 
+              0 10px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 3D buttons */
+.btn-3d-effect {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1),
+              0 1px 3px rgba(0, 0, 0, 0.08);
+  transform: translateY(0);
+}
+
+.btn-3d-effect:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(0, 0, 0, 0.1),
+              0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-3d-effect:active {
+  transform: translateY(1px);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1),
+              0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.btn-subscribe-blue {
+  background: #1EAEDB;
+  color: white;
+}
+
+.btn-view-all {
+  background: #ea384c;
+  color: white;
+}
+
+.btn-admin-rainbow {
+  background: linear-gradient(to right, #9b87f5, #ea384c, #1EAEDB);
+  color: white;
+  background-size: 200% auto;
+  transition: background-position 0.5s ease;
+}
+
+.btn-admin-rainbow:hover {
+  background-position: right center;
+}
+
+/* Print styles for better PDF export */
+@media print {
+  body * {
+    visibility: visible;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .recharts-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  
+  canvas {
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  
+  .recharts-surface {
+    overflow: visible !important;
+  }
+  
+  .chart-container {
+    margin-bottom: 20mm;
+    page-break-inside: avoid;
+  }
+  
+  .driver-stats-table {
+    page-break-inside: avoid;
+    margin-bottom: 20mm;
+  }
+  
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .data-card, .gradient-card {
+    margin-bottom: 1rem;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+}

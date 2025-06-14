@@ -1,0 +1,424 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 255 70% 60%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 260 60% 95%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 260 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 262 70% 90%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 260 31.8% 91.4%;
+    --input: 260 31.8% 91.4%;
+    --ring: 255 83% 63%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 260 47% 41%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 255 83% 73%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 260 35% 50%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 260 35% 50%;
+    --sidebar-ring: 255 83% 73%;
+    
+    /* New theme colors */
+    --bg-cream: 36 33% 94%;
+    --purple-chat: 264 60% 80%;
+    --book-green: 120 39% 54%;
+    --book-blue: 210 100% 56%;
+    --book-red: 0 73% 58%;
+    --subscribe-blue: 195 97% 49%;
+    --view-all-red: 0 73% 58%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    color: #000000; /* Ensuring black text color throughout the site */
+    background-color: hsl(var(--bg-cream));
+    /* Mobile optimizations */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* Mobile specific styles */
+  .capacitor-app {
+    /* Safe area handling for iOS */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .mobile-bottom-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-top-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Dashboard card with purple gradient */
+  .dashboard-card {
+    @apply bg-gradient-to-br from-white to-purple-50 rounded-lg shadow-md p-4 border border-purple-100 transition-all hover:shadow-lg;
+  }
+
+  .status-delivered {
+    @apply bg-success/20 text-success font-medium px-2 py-1 rounded-md;
+  }
+
+  .status-pending {
+    @apply bg-warning/20 text-warning font-medium px-2 py-1 rounded-md;
+  }
+
+  .status-failed {
+    @apply bg-error/20 text-error font-medium px-2 py-1 rounded-md;
+  }
+
+  /* Animasi untuk elemen */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Kelas animasi yang dapat digunakan */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease forwards;
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.5s ease forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease forwards;
+  }
+  
+  /* Card styles */
+  .card-elegant {
+    @apply bg-gradient-to-br from-white to-purple-100 text-black border border-purple-200 rounded-lg shadow-md hover:shadow-lg transition-all duration-300;
+  }
+  
+  .card-gradient {
+    @apply bg-gradient-to-br from-white to-purple-200 text-black border border-purple-200 rounded-lg shadow-md;
+  }
+
+  /* Button styles enhanced */
+  .btn-elegant {
+    @apply bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-md shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
+  /* Book themed cards */
+  .book-card {
+    @apply rounded-lg shadow-xl transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl;
+    box-shadow: 0 15px 25px rgba(0,0,0,0.2);
+    background: #ffffff;
+    border-left: 8px solid;
+  }
+  
+  .book-card-purple {
+    border-left-color: hsl(var(--purple-chat));
+  }
+  
+  .book-card-green {
+    border-left-color: hsl(var(--book-green));
+  }
+  
+  .book-card-blue {
+    border-left-color: hsl(var(--book-blue));
+  }
+  
+  .book-card-red {
+    border-left-color: hsl(var(--book-red));
+  }
+
+  /* 3D button styles */
+  .btn-3d {
+    @apply font-medium rounded-lg text-white px-4 py-2 shadow-lg transition-all duration-300;
+    transform: perspective(100px) translateZ(0);
+  }
+  
+  .btn-3d:hover {
+    transform: perspective(100px) translateZ(5px);
+  }
+  
+  .btn-3d-blue {
+    background-color: hsl(var(--subscribe-blue));
+    box-shadow: 0 4px 0 darken(hsl(var(--subscribe-blue)), 10%);
+  }
+  
+  .btn-3d-red {
+    background-color: hsl(var(--view-all-red));
+    box-shadow: 0 4px 0 darken(hsl(var(--view-all-red)), 10%);
+  }
+  
+  /* 3D Chart effects */
+  .chart-3d {
+    filter: drop-shadow(0px 10px 4px rgba(0,0,0,0.2));
+  }
+  
+  .chart-container {
+    @apply p-4 bg-white rounded-lg shadow-xl;
+    border-radius: 12px;
+    box-shadow: 0 15px 25px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(to right, 
+      hsl(var(--purple-chat)), 
+      hsl(var(--book-green)),
+      hsl(var(--book-blue)),
+      hsl(var(--book-red))
+    );
+  }
+
+  /* Table styles */
+  .table-elegant {
+    @apply w-full border-collapse;
+  }
+  
+  .table-elegant th {
+    @apply bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium px-4 py-2 text-left;
+  }
+  
+  .table-elegant tr {
+    @apply border-b border-purple-100 hover:bg-purple-50/30 transition-colors;
+  }
+  
+  .table-elegant td {
+    @apply px-4 py-3 text-black;
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    @apply backdrop-blur-sm bg-white/70 border border-white/20 shadow-sm;
+  }
+
+  .section-padding {
+    @apply px-4 py-8 md:px-6 md:py-12;
+  }
+  
+  /* Stagger animation delay for list items */
+  .stagger-item:nth-child(1) { animation-delay: 0.1s; }
+  .stagger-item:nth-child(2) { animation-delay: 0.2s; }
+  .stagger-item:nth-child(3) { animation-delay: 0.3s; }
+  .stagger-item:nth-child(4) { animation-delay: 0.4s; }
+  .stagger-item:nth-child(5) { animation-delay: 0.5s; }
+  .stagger-item:nth-child(6) { animation-delay: 0.6s; }
+  .stagger-item:nth-child(7) { animation-delay: 0.7s; }
+  .stagger-item:nth-child(8) { animation-delay: 0.8s; }
+  .stagger-item:nth-child(9) { animation-delay: 0.9s; }
+  .stagger-item:nth-child(10) { animation-delay: 1.0s; }
+  
+  /* Make print exports look good */
+  @media print {
+    body {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .recharts-wrapper {
+      page-break-inside: avoid;
+    }
+
+    canvas, .recharts-surface {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+  }
+  
+  /* Mobile responsive styles - IMPROVED */
+  @media (max-width: 768px) {
+    .grid-cols-1 {
+      grid-template-columns: 1fr;
+    }
+    
+    .flex-col-mobile {
+      flex-direction: column;
+    }
+    
+    .w-full-mobile {
+      width: 100%;
+    }
+    
+    .px-4-mobile {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    
+    .text-sm-mobile {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+    
+    /* Improved mobile button styles */
+    button, 
+    a[role="button"],
+    a.btn,
+    .btn {
+      @apply px-3 py-2 text-sm whitespace-nowrap overflow-hidden text-ellipsis;
+      min-height: 44px;
+      max-width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Improved spacing for mobile */
+    .mobile-spacing {
+      @apply p-3 space-y-4;
+    }
+    
+    .mobile-card {
+      @apply p-3 rounded-lg my-2;
+    }
+    
+    /* Better table display on mobile */
+    table {
+      @apply table-auto w-full text-sm;
+    }
+    
+    td, th {
+      @apply p-2 text-left;
+    }
+    
+    /* Mobile menu improvements */
+    .mobile-menu {
+      @apply p-4 space-y-4;
+    }
+    
+    /* Mobile header */
+    .mobile-header {
+      @apply p-3 flex items-center justify-between w-full;
+    }
+    
+    /* Fix for iOS momentum scroll */
+    .overflow-auto, 
+    .overflow-y-auto, 
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Added mobile container */
+    .mobile-container {
+      @apply mx-auto px-4 py-3 max-w-full;
+    }
+  }
+  
+  /* Splash screen styles */
+  .splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #9b87f5 0%, #6E59A5 100%);
+    z-index: 9999;
+    transition: opacity 0.5s ease-out;
+  }
+  
+  .splash-logo {
+    width: 150px;
+    height: 150px;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+  }
+  
+  .splash-title {
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    opacity: 0;
+    animation: fadeIn 0.8s ease-out 0.3s forwards;
+  }
+  
+  .splash-subtitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    opacity: 0;
+    animation: fadeIn 0.8s ease-out 0.6s forwards;
+  }
+  
+  .splash-loader {
+    width: 200px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    margin-top: 30px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .splash-loader:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: white;
+    transform: translateX(-100%);
+    animation: loading 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  @keyframes loading {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+}
