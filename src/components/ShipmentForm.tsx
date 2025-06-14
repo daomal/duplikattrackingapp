@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +12,14 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { createShipment } from "@/lib/shipmentService";
 import { Shipment } from "@/lib/types";
+import { DRIVERS_LIST } from "@/lib/constants";
 
 interface ShipmentFormProps {
   onShipmentCreated: () => void;
-  drivers: string[];
+  drivers?: string[]; // Keep for backward compatibility
 }
 
-const ShipmentForm: React.FC<ShipmentFormProps> = ({ onShipmentCreated, drivers }) => {
+const ShipmentForm: React.FC<ShipmentFormProps> = ({ onShipmentCreated }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     noSuratJalan: "",
@@ -152,7 +152,7 @@ const ShipmentForm: React.FC<ShipmentFormProps> = ({ onShipmentCreated, drivers 
               <SelectValue placeholder="Pilih Supir" />
             </SelectTrigger>
             <SelectContent>
-              {drivers.map((driver) => (
+              {DRIVERS_LIST.map((driver) => (
                 <SelectItem key={driver} value={driver}>
                   {driver}
                 </SelectItem>
