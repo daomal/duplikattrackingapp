@@ -29,16 +29,20 @@ const Auth = () => {
   const [showAdminCreation, setShowAdminCreation] = useState(false);
 
   useEffect(() => {
-    // Redirect if user is already logged in
-    if (user && profile) {
-      console.log("User already logged in, redirecting based on role");
-      if (profile.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard-supir');
-      }
+    // Only redirect if we have both user and profile
+    if (user && profile && !authLoading) {
+      console.log("User already logged in, redirecting based on role:", profile.role);
+      
+      // Small delay to ensure state is stable
+      setTimeout(() => {
+        if (profile.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/dashboard-supir', { replace: true });
+        }
+      }, 100);
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

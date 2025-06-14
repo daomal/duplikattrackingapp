@@ -8,10 +8,11 @@ import { Capacitor } from "@capacitor/core";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import Admin from "@/pages/Admin";
+import DriverDashboard from "@/pages/DriverDashboard";
+import TrackingMap from "@/pages/TrackingMap";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicData from "@/pages/PublicData";
-import TrackingMap from "@/pages/TrackingMap";
 import InstallApp from "@/components/InstallApp";
 import SplashScreen from "@/components/SplashScreen";
 
@@ -61,6 +62,14 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="admin">
                       <Admin />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard-supir"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <DriverDashboard />
                     </ProtectedRoute>
                   }
                 />
