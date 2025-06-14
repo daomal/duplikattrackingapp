@@ -39,7 +39,7 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
       return false;
     }
 
-    console.log('Checking if user exists in profiles:', user.id);
+    console.log('Ensuring user exists in profiles:', user.id, user.email);
 
     // Check if the user exists in the profiles table
     const { data: existingProfile, error: selectError } = await supabase
@@ -50,7 +50,7 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
 
     if (selectError) {
       console.error('Error checking user profile:', selectError);
-      return false;
+      // Don't return false here, try to create the profile anyway
     }
 
     // If the user doesn't exist, create them
@@ -74,7 +74,26 @@ export const ensureUserInProfiles = async (): Promise<boolean> => {
 
       if (insertError) {
         console.error('Error creating user profile:', insertError);
-        return false;
+        
+        // Try alternative approach - direct insert without RLS
+        try {
+          const { error: directInsertError } = await supabase.rpc('create_user_profile', {
+            user_id: user.id,
+            user_name: userName,
+            user_role: 'user'
+          });
+          
+          if (directInsertError) {
+            console.error('Direct insert also failed:', directInsertError);
+            return false;
+          }
+          
+          console.log('Profile created via RPC function');
+          return true;
+        } catch (rpcError) {
+          console.error('RPC function failed:', rpcError);
+          return false;
+        }
       }
       
       console.log('User profile created successfully:', newProfile);
@@ -122,10 +141,42 @@ export const registerUser = async (email: string, password: string, name: string
     if (data.user) {
       console.log('User registered successfully:', data.user.email);
       
-      // Wait a bit for the trigger to work, then ensure profile exists
-      setTimeout(async () => {
-        await ensureUserInProfiles();
-      }, 1000);
+      // Try to ensure profile exists immediately
+      try {
+        // Wait a moment for the trigger to work
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check if profile was created by trigger
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle();
+          
+        if (!profile) {
+          console.log('Profile not created by trigger, creating manually...');
+          
+          // Create profile manually
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              name: name,
+              role: 'user'
+            });
+            
+          if (profileError) {
+            console.error('Manual profile creation failed:', profileError);
+          } else {
+            console.log('Profile created manually');
+          }
+        } else {
+          console.log('Profile created by trigger:', profile);
+        }
+      } catch (profileError) {
+        console.error('Error handling profile creation:', profileError);
+        // Don't fail registration if profile creation fails
+      }
     }
     
     return {
@@ -290,42 +341,94 @@ export const createAdminUser = async (email: string, password: string, name: str
   message: string;
 }> => {
   try {
-    // First register the user
-    const registerResult = await registerUser(email, password, name);
+    console.log('Creating admin user:', email);
     
-    if (!registerResult.success) {
-      return registerResult;
+    // First register the user
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name,
+          full_name: name
+        }
+      }
+    });
+    
+    if (error) {
+      console.error('Admin registration error:', error);
+      return {
+        success: false,
+        message: error.message || 'Gagal membuat admin'
+      };
     }
     
-    // Wait for profile creation
+    if (!data.user) {
+      return {
+        success: false,
+        message: 'User tidak berhasil dibuat'
+      };
+    }
+    
+    console.log('Admin user registered, creating profile...');
+    
+    // Wait for trigger to work
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Update the user's role to admin
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'admin' })
-        .eq('id', user.id);
-        
-      if (error) {
-        console.error('Error updating user role to admin:', error);
-        return {
-          success: false,
-          message: 'User created but failed to set admin role'
-        };
-      }
+    // Create or update profile with admin role
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: data.user.id,
+        name: name,
+        role: 'admin'
+      });
+      
+    if (profileError) {
+      console.error('Error creating admin profile:', profileError);
+      return {
+        success: false,
+        message: 'User dibuat tapi gagal set role admin'
+      };
     }
+    
+    console.log('Admin user created successfully');
     
     return {
       success: true,
-      message: 'Admin user created successfully'
+      message: 'Admin berhasil dibuat!'
     };
   } catch (error: any) {
+    console.error('Create admin exception:', error);
     return {
       success: false,
-      message: error.message || 'Failed to create admin user'
+      message: error.message || 'Gagal membuat admin'
     };
+  }
+};
+
+/**
+ * Create user profile manually (fallback function)
+ */
+export const createUserProfile = async (userId: string, name: string, role: 'user' | 'admin' = 'user'): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        name: name,
+        role: role
+      });
+      
+    if (error) {
+      console.error('Error creating user profile manually:', error);
+      return false;
+    }
+    
+    console.log('User profile created manually');
+    return true;
+  } catch (error) {
+    console.error('Exception creating user profile:', error);
+    return false;
   }
 };
